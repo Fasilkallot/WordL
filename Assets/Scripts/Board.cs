@@ -154,7 +154,7 @@ public class Board : MonoBehaviour
         rowIndex++;
         colIndex = 0;
 
-        if (rowIndex >= rows.Length)
+        if (!isWin(currentRaw) && rowIndex >= rows.Length)
         {
             GameOverText.SetActive(true);
             enabled = false;
