@@ -1,4 +1,5 @@
 using System;
+using TMPro;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -26,6 +27,16 @@ public class Board : MonoBehaviour
     public Tile.State wrongSpotState;
     public Tile.State incorrectState;
 
+    [Header("UI")]
+    public GameObject invalidWord;
+    public GameObject tryAgainButton;
+    public GameObject newWordButton;
+    public GameObject WinnerText;
+    public GameObject GameOverText;
+    public TextMeshProUGUI hintText;
+    
+
+
 
     private void Awake()
     {
@@ -34,7 +45,7 @@ public class Board : MonoBehaviour
     private void Start()
     {
         LoadData();
-        SetWord();
+        NewGame();
     }
 
     private void SetWord()
@@ -61,6 +72,7 @@ public class Board : MonoBehaviour
             colIndex = Mathf.Max(colIndex - 1, 0);
             currentRaw.tiles[colIndex].SetLetter('\0');
             currentRaw.tiles[colIndex].SetState(emptyState);
+            invalidWord.SetActive(false);
 
         }
         else if (colIndex >= currentRaw.tiles.Length)
@@ -89,6 +101,13 @@ public class Board : MonoBehaviour
 
     private void SubmitRaw(Raw currentRaw)
     {
+        if (!IsValidWord(currentRaw.word))
+        {
+            invalidWord.SetActive(true);
+            return;
+        }
+
+        string remaining = word;
 
         for (int i = 0; i < currentRaw.tiles.Length; i++)
         {
@@ -97,23 +116,108 @@ public class Board : MonoBehaviour
             if (word[i] == tile.letter)
             {
                 tile.SetState(correctState);
+
+                remaining = remaining.Remove(i, 1);
+                remaining = remaining.Insert(i, " ");
             }
-            else if (word.Contains(tile.letter))
-            {
-                tile.SetState(wrongSpotState);
-            }
-            else
+            else if (!word.Contains(tile.letter))
             {
                 tile.SetState(incorrectState);
             }
-            
+        
+        }
+        for(int i = 0;i < currentRaw.tiles.Length; i++)
+        {
+            Tile tile = currentRaw.tiles[i];
+
+            if (tile.state != correctState && tile.state != incorrectState)
+            {
+                if (remaining.Contains(tile.letter))
+                {
+                    tile.SetState(wrongSpotState);
+
+                    int index = remaining.IndexOf(tile.letter);
+                    remaining = remaining.Remove(index, 1);
+                    remaining = remaining.Insert(index, " ");
+                }
+                else
+                {
+                    tile.SetState(incorrectState);
+                }
+            }
+        }
+        if (isWin(currentRaw))
+        {
+            WinnerText.SetActive(true);
+            enabled = false;
         }
         rowIndex++;
         colIndex = 0;
 
         if (rowIndex >= rows.Length)
         {
+            GameOverText.SetActive(true);
             enabled = false;
         }
+    }
+    private void ClearBoard()
+    {
+        for (int i = 0; i < rows.Length; i++)
+        {
+            for (int j = 0; j < rows[i].tiles.Length; j++)
+            {
+                rows[i].tiles[j].SetLetter('\0');
+                rows[i].tiles[j].SetState(emptyState);
+            }
+        }
+        rowIndex = 0;
+        colIndex = 0;
+    }
+
+    private bool IsValidWord(string word)
+    {
+        for(int i = 0; i < validWords.Length; i++) 
+        {
+            if (validWords[i] == word)  return true; 
+        }
+        return false;
+    }
+    private bool isWin(Raw currentRaw)
+    {
+        for (int i = 0; i < currentRaw.tiles.Length; i++)
+        {
+            if (currentRaw.tiles[i].state != correctState) return false;
+        }
+        return true;
+    }
+    private void OnEnable()
+    {
+        tryAgainButton.SetActive(false);
+        newWordButton.SetActive(false);
+        WinnerText.SetActive(false);
+        hintText.gameObject.SetActive(false);
+        GameOverText.SetActive(false);
+
+    }
+    private void OnDisable()
+    {
+        tryAgainButton.SetActive(true);
+        newWordButton.SetActive(true);
+    }
+    public void NewGame()
+    {
+        ClearBoard();
+        SetWord();
+        enabled = true;
+    }
+    public void Retry()
+    {
+        ClearBoard();
+        enabled = true;
+    }
+    public void HintButton()
+    {
+        hintText.text = $"Word to find is : {word.ToUpper()}";
+        hintText.gameObject.SetActive(true);
     }
 }
